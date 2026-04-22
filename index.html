@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NFA → DFA Visualizer · Sign in</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ------------------------------------------------------------------
+       TOKENS — aligned with the main app so the two pages feel unified.
+       Background is slightly deeper to match the provided screenshot.
+       ------------------------------------------------------------------ */
+    :root {
+      --bg:       #0f1623;
+      --surface:  #161f30;
+      --text:     #e6e8ef;
+      --text2:    #9aa3b8;
+      --text3:    #5f6a82;
+      --accent:   #7b68ee;   /* violet (NFA) */
+      --accent2:  #3ecfaa;   /* teal (DFA)  */
+      --primary:  #2f6bff;   /* blue action */
+      --primary-h:#4a80ff;
+      --danger:   #f05568;
+      --border:   rgba(255,255,255,0.09);
+      --border2:  rgba(255,255,255,0.18);
+      --radius:   10px;
+      --font-display: 'Syne', system-ui, sans-serif;
+      --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-display);
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* subtle dot grid like the main app */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+
+    /* ------------------------------------------------------------------
+       LAYOUT — centered card
+       ------------------------------------------------------------------ */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 18px;
+    }
+
+    /* Logo tile — gradient violet square echoing the 'ed' style */
+    .logo-tile {
+      width: 84px;
+      height: 84px;
+      border-radius: 16px;
+      margin: 0 auto 4px;
+      background: linear-gradient(135deg, #8b55d6 0%, #5e3aa8 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 30px;
+      color: #fff;
+      letter-spacing: -1px;
+      box-shadow:
+        0 10px 30px rgba(123,104,238,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.18);
+      user-select: none;
+    }
+
+    .logo-tile .arrow {
+      font-size: 22px;
+      margin: 0 2px;
+      opacity: 0.9;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text3);
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      margin-top: -6px;
+    }
+
+    /* Language dropdown (custom-styled native <select>) */
+    .lang-wrap {
+      align-self: center;
+      position: relative;
+    }
+
+    .lang-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      color: var(--text3);
+      pointer-events: none;
+    }
+
+    .lang-select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding: 6px 28px 6px 12px;
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      background: var(--surface);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text2);
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .lang-select:hover,
+    .lang-select:focus { color: var(--text); border-color: var(--accent); }
+
+    .lang-select option {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* Hidden container Google Translate injects its own widget into —
+       we drive it programmatically and keep it off-screen. */
+    #google_translate_element {
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      height: 0;
+      overflow: hidden;
+    }
+
+    /* Hide Google Translate's default banner + tooltip so only our
+       custom dropdown is visible. */
+    .goog-te-banner-frame.skiptranslate,
+    .goog-te-gadget-icon,
+    #goog-gt-tt,
+    .goog-te-balloon-frame { display: none !important; }
+    body { top: 0 !important; }
+    .goog-text-highlight {
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+    /* Form */
+    .field label {
+      display: block;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .field input {
+      width: 100%;
+      padding: 11px 14px;
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--text);
+      background: #ffffff;
+      color: #0f1623;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field input::placeholder {
+      color: #8a96ad;
+    }
+
+    .field input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(47,107,255,0.25);
+    }
+
+    .field input.invalid {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(240,85,104,0.2);
+    }
+
+    /* Primary button — bright blue like the screenshot */
+    .btn-primary {
+      width: 100%;
+      padding: 13px 16px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 15px;
+      color: #fff;
+      background: var(--primary);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-primary:hover { background: var(--primary-h); }
+    .btn-primary:active { transform: translateY(1px); }
+    .btn-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    /* Inline error + helper messages */
+    .form-msg {
+      min-height: 18px;
+      font-size: 12px;
+      margin-top: -10px;
+      text-align: left;
+      color: var(--danger);
+      font-family: var(--font-mono);
+    }
+
+    .form-msg.info { color: var(--text3); }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 28px;
+      font-size: 12px;
+      color: var(--text3);
+    }
+
+    footer a {
+      color: inherit;
+      text-decoration: none;
+    }
+    footer a:hover { color: var(--text); }
+
+    footer .sep {
+      width: 1px;
+      height: 12px;
+      background: var(--border2);
+    }
+
+    /* Small-screen friendliness */
+    @media (max-height: 600px) {
+      body { overflow: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <main>
+    <form class="auth-card" id="auth-form" novalidate>
+
+      <div class="logo-tile" aria-hidden="true">
+        N<span class="arrow">→</span>D
+      </div>
+
+      <p class="subtitle">CSC 355 · Automata Visualizer</p>
+
+      <div class="lang-wrap">
+        <select class="lang-select" id="lang-select" aria-label="Page language">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+        </select>
+      </div>
+
+      <!-- Hidden container for Google Translate Element; we drive it
+           programmatically from #lang-select. -->
+      <div id="google_translate_element" aria-hidden="true"></div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          autocomplete="username"
+          placeholder="yourname@asu.edu"
+          spellcheck="false"
+          autofocus
+          required
+        />
+      </div>
+
+      <p class="form-msg info" id="form-msg">Use your ASU email (@asu.edu) to continue.</p>
+
+      <button type="submit" class="btn-primary" id="btn-submit">Let's Learn</button>
+    </form>
+  </main>
+
+  <footer>
+    <a href="#">Privacy</a>
+    <span class="sep" aria-hidden="true"></span>
+    <a href="#">Terms</a>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const form    = document.getElementById('auth-form');
+      const input   = document.getElementById('email');
+      const msg     = document.getElementById('form-msg');
+      const submit  = document.getElementById('btn-submit');
+
+      const DEFAULT_MSG = 'Use your ASU email (@asu.edu) to continue.';
+
+      // Very simple validator: basic email shape AND ends with @asu.edu
+      // (case-insensitive, no trailing whitespace).
+      function isAsuEmail(raw) {
+        const val = (raw || '').trim().toLowerCase();
+        // basic "looks like an email" check
+        const emailShape = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailShape.test(val)) return { ok: false, reason: 'shape' };
+        if (!val.endsWith('@asu.edu')) return { ok: false, reason: 'domain' };
+        return { ok: true, email: val };
+      }
+
+      function setError(text) {
+        msg.textContent = text;
+        msg.classList.remove('info');
+        input.classList.add('invalid');
+      }
+
+      function clearError() {
+        msg.textContent = DEFAULT_MSG;
+        msg.classList.add('info');
+        input.classList.remove('invalid');
+      }
+
+      // live clear of error state while the user edits
+      input.addEventListener('input', clearError);
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const result = isAsuEmail(input.value);
+
+        if (!result.ok) {
+          if (result.reason === 'shape') {
+            setError('That doesn\u2019t look like a valid email address.');
+          } else {
+            setError('Please sign in with your ASU email (must end in @asu.edu).');
+          }
+          input.focus();
+          return;
+        }
+
+        // success — remember the session so app.html can greet the user
+        try {
+          sessionStorage.setItem('asuUser', result.email);
+        } catch (_) { /* storage may be unavailable — not fatal */ }
+
+        // Brief visual feedback, then navigate
+        submit.disabled = true;
+        submit.textContent = 'Loading\u2026';
+        window.location.href = 'app.html';
+      });
+    })();
+
+    /* ------------------------------------------------------------------
+       GOOGLE TRANSLATE — language dropdown driver
+       ------------------------------------------------------------------
+       The <script> tag below loads element.js, which calls this global
+       init function once it's ready. We create a hidden TranslateElement
+       and then drive its internal <select.goog-te-combo> from our own
+       #lang-select so the user sees only our styled dropdown.
+       ------------------------------------------------------------------ */
+    function googleTranslateElementInit() {
+      /* global google */
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,es',
+        autoDisplay: false,
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+      }, 'google_translate_element');
+    }
+
+    (function () {
+      'use strict';
+
+      const langSelect = document.getElementById('lang-select');
+
+      // Google's widget is injected asynchronously; poll briefly for the
+      // hidden combo element before firing a change event at it.
+      function applyLanguage(code) {
+        const MAX_TRIES = 30;        // ~3 seconds total
+        const DELAY_MS  = 100;
+        let tries = 0;
+
+        (function tick() {
+          const combo = document.querySelector('select.goog-te-combo');
+          if (combo) {
+            combo.value = code;
+            combo.dispatchEvent(new Event('change'));
+            return;
+          }
+          if (++tries < MAX_TRIES) setTimeout(tick, DELAY_MS);
+        })();
+      }
+
+      langSelect.addEventListener('change', function (e) {
+        applyLanguage(e.target.value);
+      });
+    })();
+  </script>
+
+  <!-- Google Translate Element (no API key required). Loads after our
+       init callback is defined above. -->
+  <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</body>
+</html>

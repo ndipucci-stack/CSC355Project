@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NFA → DFA Converter</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Header  -->
+  <header class="site-header">
+    <div class="header-left">
+      <span class="logo">NFA<span class="logo-arrow">→</span>DFA</span>
+      <span class="header-subtitle">Subset Construction Visualizer</span>
+    </div>
+    <nav class="header-right">
+
+      <!-- Preset button + floating dropdown anchored to header -->
+      <div class="preset-wrap">
+        <button class="btn btn-ghost btn-sm" id="btn-load-preset">⬡ Load Preset</button>
+        <div class="preset-dropdown" id="preset-dropdown" hidden>
+          <p class="preset-label">Select an example NFA</p>
+          <ul class="preset-list" id="preset-list">
+            <!-- populated by JS -->
+          </ul>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost btn-sm" id="btn-tutorial" aria-label="Start guided tutorial">✦ Tutorial</button>
+      <button class="btn btn-ghost btn-sm" id="btn-clear">Clear All</button>
+      <button class="btn btn-primary" id="btn-convert">Convert →</button>
+    </nav>
+  </header>
+
+  <!-- Main Layout  -->
+  <main class="app-layout">
+
+    <!-- LEFT SIDEBAR: NFA Input --> 
+    <aside class="sidebar">
+
+      <section class="panel" id="panel-definition">
+        <div class="panel-header">
+          <span class="panel-dot nfa"></span>
+          <h2>NFA Definition</h2>
+        </div>
+
+        <div class="panel-body">
+
+          <div class="field-group">
+            <label for="input-states">States</label>
+            <input type="text" id="input-states" placeholder="q0, q1, q2" spellcheck="false" />
+            <p class="field-hint">Comma-separated state names</p>
+          </div>
+
+          <div class="field-group">
+            <label for="input-alphabet">Alphabet</label>
+            <input type="text" id="input-alphabet" placeholder="a, b" spellcheck="false" />
+            <p class="field-hint">Symbols — add ε for epsilon transitions</p>
+          </div>
+
+          <div class="field-group">
+            <label for="input-start">Start State</label>
+            <input type="text" id="input-start" placeholder="q0" spellcheck="false" />
+          </div>
+
+          <div class="field-group">
+            <label for="input-accept">Accept States</label>
+            <input type="text" id="input-accept" placeholder="q2" spellcheck="false" />
+            <p class="field-hint">Comma-separated</p>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Transition Table -->
+      <section class="panel" id="panel-transitions">
+        <div class="panel-header">
+          <span class="panel-dot nfa"></span>
+          <h2>Transition Function</h2>
+          <button class="btn btn-ghost btn-xs" id="btn-build-table">Build Table</button>
+        </div>
+
+        <div class="panel-body">
+          <div id="transition-table-wrap">
+            <p class="empty-hint">Enter states and alphabet above, then click <strong>Build Table</strong>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- String Simulator -->
+      <section class="panel" id="panel-simulate">
+        <div class="panel-header">
+          <span class="panel-dot accent2"></span>
+          <h2>String Simulator</h2>
+        </div>
+
+        <div class="panel-body">
+          <div class="field-group">
+            <label for="input-string">Input String</label>
+            <div class="sim-input-row">
+              <input type="text" id="input-string" placeholder="aabb" spellcheck="false" />
+              <button class="btn btn-primary btn-sm" id="btn-simulate">Run</button>
+            </div>
+          </div>
+
+          <div class="sim-controls" id="sim-controls" hidden>
+            <button class="btn btn-ghost btn-sm" id="btn-sim-prev">← Prev</button>
+            <span class="sim-step-counter" id="sim-step-counter">Step 0 / 0</span>
+            <button class="btn btn-ghost btn-sm" id="btn-sim-next">Next →</button>
+          </div>
+
+          <div class="sim-result" id="sim-result" hidden>
+            <!-- accept / reject banner injected by JS -->
+          </div>
+
+          <div class="sim-tape" id="sim-tape" hidden>
+            <!-- tape cells injected by JS -->
+          </div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- CENTER: Graph Canvases-->
+    <section class="canvas-area">
+
+      <div class="graph-panel" id="graph-nfa">
+        <div class="graph-panel-header">
+          <span class="graph-label nfa-label">NFA</span>
+          <div class="graph-legend">
+            <span class="legend-item"><span class="legend-swatch start"></span>Start</span>
+            <span class="legend-item"><span class="legend-swatch accept"></span>Accept</span>
+          </div>
+          <button class="btn btn-ghost btn-xs graph-reset-btn" data-graph="nfa">Reset View</button>
+        </div>
+        <div class="graph-canvas" id="canvas-nfa">
+          <div class="canvas-empty" id="empty-nfa">
+            <div class="empty-icon">◎</div>
+            <p>Build your NFA to see it here</p>
+          </div>
+          <!-- D3 SVG injected here -->
+        </div>
+      </div>
+
+      <div class="graph-panel" id="graph-dfa">
+        <div class="graph-panel-header">
+          <span class="graph-label dfa-label">DFA</span>
+          <div class="graph-legend">
+            <span class="legend-item"><span class="legend-swatch dead"></span>Dead state</span>
+          </div>
+          <button class="btn btn-ghost btn-xs graph-reset-btn" data-graph="dfa">Reset View</button>
+        </div>
+        <div class="graph-canvas" id="canvas-dfa">
+          <div class="canvas-empty" id="empty-dfa">
+            <div class="empty-icon">⬡</div>
+            <p>Run conversion to see the DFA</p>
+          </div>
+          <!-- D3 SVG injected here -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT: Steps Log -->
+    <aside class="steps-panel">
+
+      <div class="panel" id="panel-steps">
+        <div class="panel-header">
+          <span class="panel-dot accent3"></span>
+          <h2>Subset Construction</h2>
+        </div>
+
+        <div class="steps-tabs">
+          <button class="steps-tab active" data-tab="log">Step Log</button>
+          <button class="steps-tab" data-tab="table">DFA Table</button>
+        </div>
+
+        <div class="steps-body" id="steps-body">
+
+          <!-- Step Log Tab -->
+          <div class="steps-tab-content active" id="tab-log">
+            <div class="steps-empty" id="steps-empty">
+              <p>Steps will appear here after conversion.</p>
+            </div>
+            <ol class="steps-list" id="steps-list" hidden>
+              <!-- step items injected by JS -->
+            </ol>
+          </div>
+
+          <!-- DFA Table Tab -->
+          <div class="steps-tab-content" id="tab-table">
+            <div class="table-wrap" id="dfa-table-wrap">
+              <p class="empty-hint">Run conversion to see the transition table.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Info card -->
+      <div class="info-card" id="info-card">
+        <h3 class="info-title">How it works</h3>
+        <p>The <strong>subset construction</strong> algorithm converts any NFA into an equivalent DFA by treating each set of NFA states as a single DFA state.</p>
+        <ol class="info-steps">
+          <li>Compute the ε-closure of the NFA start state</li>
+          <li>For each unprocessed DFA state, apply each symbol</li>
+          <li>Compute ε-closure of the resulting NFA state set</li>
+          <li>Repeat until no new states are discovered</li>
+        </ol>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- TOAST NOTIFS-->
+  <div class="toast" id="toast" hidden>
+    <span id="toast-msg"></span>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="examples/presets.js"></script>
+  <script src="automata/nfa.js"></script>
+  <script src="automata/dfa.js"></script>
+  <script src="automata/converter.js"></script>
+  <script src="automata/minimizer.js"></script>
+  <script src="main.js"></script>
+  <script src="tutorial/tutorial.js"></script>
+
+</body>
+</html>
