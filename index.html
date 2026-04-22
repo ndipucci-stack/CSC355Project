@@ -10,19 +10,16 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700&display=swap" rel="stylesheet" />
 
   <style>
-    /* ------------------------------------------------------------------
-       TOKENS — aligned with the main app so the two pages feel unified.
-       Background is slightly deeper to match the provided screenshot.
-       ------------------------------------------------------------------ */
+    /* design tokens */
     :root {
       --bg:       #0f1623;
       --surface:  #161f30;
       --text:     #e6e8ef;
       --text2:    #9aa3b8;
       --text3:    #5f6a82;
-      --accent:   #7b68ee;   /* violet (NFA) */
-      --accent2:  #3ecfaa;   /* teal (DFA)  */
-      --primary:  #2f6bff;   /* blue action */
+      --accent:   #7b68ee;
+      --accent2:  #3ecfaa;
+      --primary:  #2f6bff;
       --primary-h:#4a80ff;
       --danger:   #f05568;
       --border:   rgba(255,255,255,0.09);
@@ -34,9 +31,7 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body {
-      height: 100%;
-    }
+    html, body { height: 100%; }
 
     body {
       background: var(--bg);
@@ -50,7 +45,7 @@
       overflow: hidden;
     }
 
-    /* subtle dot grid like the main app */
+    /* dot grid background */
     body::before {
       content: '';
       position: fixed;
@@ -60,9 +55,7 @@
       pointer-events: none;
     }
 
-    /* ------------------------------------------------------------------
-       LAYOUT — centered card
-       ------------------------------------------------------------------ */
+    /* centered layout */
     main {
       flex: 1;
       display: flex;
@@ -82,7 +75,7 @@
       gap: 18px;
     }
 
-    /* Logo tile — gradient violet square echoing the 'ed' style */
+    /* logo tile */
     .logo-tile {
       width: 84px;
       height: 84px;
@@ -119,7 +112,7 @@
       margin-top: -6px;
     }
 
-    /* Language dropdown (custom-styled native <select>) */
+    /* language dropdown */
     .lang-wrap {
       align-self: center;
       position: relative;
@@ -160,8 +153,7 @@
       color: var(--text);
     }
 
-    /* Hidden container Google Translate injects its own widget into —
-       we drive it programmatically and keep it off-screen. */
+    /* hidden Google Translate host */
     #google_translate_element {
       position: absolute;
       left: -9999px;
@@ -170,8 +162,7 @@
       overflow: hidden;
     }
 
-    /* Hide Google Translate's default banner + tooltip so only our
-       custom dropdown is visible. */
+    /* suppress Google Translate chrome */
     .goog-te-banner-frame.skiptranslate,
     .goog-te-gadget-icon,
     #goog-gt-tt,
@@ -182,7 +173,7 @@
       box-shadow: none !important;
     }
 
-    /* Form */
+    /* form */
     .field label {
       display: block;
       font-weight: 600;
@@ -205,9 +196,7 @@
       transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    .field input::placeholder {
-      color: #8a96ad;
-    }
+    .field input::placeholder { color: #8a96ad; }
 
     .field input:focus {
       border-color: var(--primary);
@@ -219,7 +208,7 @@
       box-shadow: 0 0 0 3px rgba(240,85,104,0.2);
     }
 
-    /* Primary button — bright blue like the screenshot */
+    /* primary button */
     .btn-primary {
       width: 100%;
       padding: 13px 16px;
@@ -237,12 +226,9 @@
 
     .btn-primary:hover { background: var(--primary-h); }
     .btn-primary:active { transform: translateY(1px); }
-    .btn-primary:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
-    /* Inline error + helper messages */
+    /* inline form message */
     .form-msg {
       min-height: 18px;
       font-size: 12px;
@@ -254,7 +240,7 @@
 
     .form-msg.info { color: var(--text3); }
 
-    /* Footer */
+    /* footer */
     footer {
       position: relative;
       z-index: 1;
@@ -279,7 +265,7 @@
       background: var(--border2);
     }
 
-    /* Small-screen friendliness */
+    /* short-viewport fallback */
     @media (max-height: 600px) {
       body { overflow: auto; }
     }
@@ -303,8 +289,7 @@
         </select>
       </div>
 
-      <!-- Hidden container for Google Translate Element; we drive it
-           programmatically from #lang-select. -->
+      <!-- hidden host for Google Translate -->
       <div id="google_translate_element" aria-hidden="true"></div>
 
       <div class="field">
@@ -344,11 +329,9 @@
 
       const DEFAULT_MSG = 'Use your ASU email (@asu.edu) to continue.';
 
-      // Very simple validator: basic email shape AND ends with @asu.edu
-      // (case-insensitive, no trailing whitespace).
+      // accepts only well-formed addresses ending in @asu.edu
       function isAsuEmail(raw) {
         const val = (raw || '').trim().toLowerCase();
-        // basic "looks like an email" check
         const emailShape = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailShape.test(val)) return { ok: false, reason: 'shape' };
         if (!val.endsWith('@asu.edu')) return { ok: false, reason: 'domain' };
@@ -367,7 +350,7 @@
         input.classList.remove('invalid');
       }
 
-      // live clear of error state while the user edits
+      // reset error state as the user types
       input.addEventListener('input', clearError);
 
       form.addEventListener('submit', function (e) {
@@ -385,26 +368,16 @@
           return;
         }
 
-        // success — remember the session so app.html can greet the user
-        try {
-          sessionStorage.setItem('asuUser', result.email);
-        } catch (_) { /* storage may be unavailable — not fatal */ }
+        // remember the session so app.html can gate access
+        try { sessionStorage.setItem('asuUser', result.email); } catch (_) {}
 
-        // Brief visual feedback, then navigate
         submit.disabled = true;
         submit.textContent = 'Loading\u2026';
         window.location.href = 'app.html';
       });
     })();
 
-    /* ------------------------------------------------------------------
-       GOOGLE TRANSLATE — language dropdown driver
-       ------------------------------------------------------------------
-       The <script> tag below loads element.js, which calls this global
-       init function once it's ready. We create a hidden TranslateElement
-       and then drive its internal <select.goog-te-combo> from our own
-       #lang-select so the user sees only our styled dropdown.
-       ------------------------------------------------------------------ */
+    // Google Translate Element init callback (name is referenced by the script URL below)
     function googleTranslateElementInit() {
       /* global google */
       new google.translate.TranslateElement({
@@ -415,15 +388,15 @@
       }, 'google_translate_element');
     }
 
+    // drive the hidden Google combo from our custom dropdown
     (function () {
       'use strict';
 
       const langSelect = document.getElementById('lang-select');
 
-      // Google's widget is injected asynchronously; poll briefly for the
-      // hidden combo element before firing a change event at it.
+      // Google's widget is injected async; poll briefly for the combo
       function applyLanguage(code) {
-        const MAX_TRIES = 30;        // ~3 seconds total
+        const MAX_TRIES = 30;
         const DELAY_MS  = 100;
         let tries = 0;
 
@@ -444,8 +417,7 @@
     })();
   </script>
 
-  <!-- Google Translate Element (no API key required). Loads after our
-       init callback is defined above. -->
+  <!-- Google Translate Element — no API key required -->
   <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

@@ -1,25 +1,13 @@
-/* =========================================================================
-   TUTORIAL — Guided Interactive Walkthrough
-   -------------------------------------------------------------------------
-   Lightweight, dependency-free tour. Spotlights UI regions in order,
-   shows a popover with a short blurb that mixes UI orientation with a
-   plain-English theory reminder (NFA / DFA / ε-closure / subset
-   construction).
-
-   No external libraries. Plays nicely with the project's vanilla-JS style.
-   ======================================================================== */
+// Guided walkthrough for the NFA→DFA visualizer.
+// Vanilla JS, no dependencies. Triggered by the header Tutorial button.
 
 (function () {
   'use strict';
 
-  /* ------------------------------------------------------------------
-     STEP DEFINITIONS
-     Each step targets a selector that is ALWAYS in the DOM (not hidden).
-     `placement` is a hint — the engine will flip it if there is no room.
-     ------------------------------------------------------------------ */
+  // Each step selector must always be in the DOM (not hidden).
   const STEPS = [
     {
-      selector: null, // centered welcome
+      selector: null,
       title: 'Welcome to the NFA → DFA Visualizer',
       body:
         "This quick tour walks you through the app in about a minute. " +
@@ -129,9 +117,7 @@
     },
   ];
 
-  /* ------------------------------------------------------------------
-     ENGINE STATE
-     ------------------------------------------------------------------ */
+  // engine state
   let idx = 0;
   let active = false;
   let backdropEl = null;
@@ -140,9 +126,6 @@
   let escListener = null;
   let resizeListener = null;
 
-  /* ------------------------------------------------------------------
-     DOM BUILDERS
-     ------------------------------------------------------------------ */
   function buildDom() {
     backdropEl = document.createElement('div');
     backdropEl.className = 'tut-backdrop';
@@ -183,9 +166,6 @@
     backdropEl = spotlightEl = popoverEl = null;
   }
 
-  /* ------------------------------------------------------------------
-     RENDERING A STEP
-     ------------------------------------------------------------------ */
   function renderStep() {
     const step = STEPS[idx];
     const total = STEPS.length;
@@ -205,7 +185,6 @@
       dots.appendChild(d);
     }
 
-    // Prev/Next button state
     const prevBtn = popoverEl.querySelector('[data-tut="prev"]');
     const nextBtn = popoverEl.querySelector('[data-tut="next"]');
     prevBtn.disabled = idx === 0;
@@ -218,44 +197,41 @@
     const target = step.selector ? document.querySelector(step.selector) : null;
 
     if (!target) {
-      // centered mode — hide spotlight, center popover
+      // centered welcome — no target
       spotlightEl.style.display = 'none';
       popoverEl.classList.add('is-centered');
       popoverEl.style.top = '';
       popoverEl.style.left = '';
       popoverEl.style.transform = '';
-      // force reflow to pick up centered class before any measuring
       return;
     }
 
     popoverEl.classList.remove('is-centered');
     spotlightEl.style.display = 'block';
 
-    // Ensure target is on-screen before measuring
     target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
-    // Give the browser a frame to settle after scrollIntoView
+    // wait one frame for scroll to settle before measuring
     requestAnimationFrame(() => {
       const rect = target.getBoundingClientRect();
       const pad = 8;
 
-      // spotlight
       spotlightEl.style.top = (rect.top - pad) + 'px';
       spotlightEl.style.left = (rect.left - pad) + 'px';
       spotlightEl.style.width = (rect.width + pad * 2) + 'px';
       spotlightEl.style.height = (rect.height + pad * 2) + 'px';
 
-      // popover placement
       const placement = resolvePlacement(step.placement || 'bottom', rect);
       placePopover(rect, placement);
     });
   }
 
+  // pick the preferred side if it fits, else fall back to any side that does
   function resolvePlacement(pref, rect) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const popW = 340;
-    const popH = 220; // conservative estimate
+    const popH = 220;
     const gap = 16;
 
     const room = {
@@ -264,28 +240,19 @@
       left:   rect.left - gap,
       right:  vw - rect.right - gap,
     };
-
-    const needs = {
-      top:    popH,
-      bottom: popH,
-      left:   popW,
-      right:  popW,
-    };
+    const needs = { top: popH, bottom: popH, left: popW, right: popW };
 
     if (room[pref] >= needs[pref]) return pref;
-    // fall back to any side that fits, in a sensible order
-    const order = ['bottom', 'right', 'top', 'left'];
-    for (const p of order) {
+    for (const p of ['bottom', 'right', 'top', 'left']) {
       if (room[p] >= needs[p]) return p;
     }
-    return pref; // last resort — may overflow slightly, CSS clamps
+    return pref;
   }
 
   function placePopover(rect, placement) {
     const gap = 16;
     popoverEl.dataset.placement = placement;
 
-    // reset
     popoverEl.style.top = '';
     popoverEl.style.left = '';
     popoverEl.style.transform = '';
@@ -324,23 +291,13 @@
     popoverEl.style.left = left + 'px';
   }
 
-  /* ------------------------------------------------------------------
-     CONTROL FLOW
-     ------------------------------------------------------------------ */
   function next() {
-    if (idx < STEPS.length - 1) {
-      idx++;
-      renderStep();
-    } else {
-      stop();
-    }
+    if (idx < STEPS.length - 1) { idx++; renderStep(); }
+    else { stop(); }
   }
 
   function prev() {
-    if (idx > 0) {
-      idx--;
-      renderStep();
-    }
+    if (idx > 0) { idx--; renderStep(); }
   }
 
   function start() {
@@ -360,7 +317,6 @@
     window.addEventListener('resize', resizeListener);
     window.addEventListener('scroll', resizeListener, true);
 
-    // slight delay so the freshly-appended nodes have styles applied
     requestAnimationFrame(renderStep);
   }
 
@@ -373,9 +329,6 @@
     destroyDom();
   }
 
-  /* ------------------------------------------------------------------
-     PUBLIC HOOK — wire the header button
-     ------------------------------------------------------------------ */
   function bind() {
     const btn = document.getElementById('btn-tutorial');
     if (btn) btn.addEventListener('click', start);
@@ -387,6 +340,5 @@
     bind();
   }
 
-  // expose for debugging / future hooks
   window.DfaTutorial = { start, stop };
 })();

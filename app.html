@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NFA → DFA Converter</title>
   <link rel="stylesheet" href="style.css" />
+
+  <!-- gate: bounce back to landing if the user didn't sign in -->
+  <script>
+    if (!sessionStorage.getItem('asuUser')) {
+      window.location.replace('index.html');
+    }
+  </script>
 </head>
 <body>
 
