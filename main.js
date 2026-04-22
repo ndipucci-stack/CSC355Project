@@ -31,6 +31,7 @@ const UI = {
   btnSimulate:      $('btn-simulate'),
   btnSimPrev:       $('btn-sim-prev'),
   btnSimNext:       $('btn-sim-next'),
+  btnMinimize:      $('btn-minimize'),
 
   // Transition table
   transitionWrap:   $('transition-table-wrap'),
@@ -67,7 +68,9 @@ const UI = {
 // 
 let currentNFA  = null;   // NFA instance
 let currentDFA  = null;   // DFA instance (post conversion)
-let currentMinDFA = null; // DFA instance (post minimization, or null)
+let currentMinDFA = null;   // DFA instance (post minimization, or null)
+let currentMinSteps = null; // Minimizer step log, or null
+let isShowingMinimized = false; // which DFA is in the right panel
 
 const simState = {
   trace:       [],
@@ -349,8 +352,11 @@ function handleConvert() {
   currentDFA    = result.dfa;
   currentMinDFA = result.minDFA;
 
-  // Reset simulator
+  // Reset simulator + minimizer state
   resetSimulator();
+  currentMinSteps    = null;
+  isShowingMinimized = false;
+  _updateMinimizeButton();
 
   // Render both graphs
   renderNFA(currentNFA);
@@ -364,6 +370,94 @@ function handleConvert() {
     `Converted — ${currentDFA.states.length} DFA states from ${currentNFA.states.length} NFA states.`,
     'success'
   );
+}
+
+
+//
+//  4b. MINIMIZATION HANDLER
+//
+
+/**
+ * Toggle the DFA panel between the original DFA and its
+ * Moore-minimized equivalent. Computes the minimized DFA
+ * lazily on first click and caches it.
+ */
+function handleMinimize() {
+  if (!currentDFA) {
+    showToast('Convert an NFA first.', 'error');
+    return;
+  }
+
+  if (!isShowingMinimized) {
+    // Compute once, then cache
+    if (!currentMinDFA) {
+      const result = Minimizer.minimize(currentDFA);
+      currentMinDFA   = result.dfa;
+      currentMinSteps = result.steps;
+    }
+
+    // Swap the DFA panel over to the minimized machine
+    resetSimulator();
+    renderDFA(currentMinDFA);
+    buildDFATable(currentMinDFA);
+    appendMinimizeStepsToLog(currentMinSteps);
+
+    isShowingMinimized = true;
+
+    const delta = currentDFA.states.length - currentMinDFA.states.length;
+    showToast(
+      delta > 0
+        ? `Minimized — ${currentDFA.states.length} → ${currentMinDFA.states.length} states (${delta} merged).`
+        : `Already minimal — ${currentDFA.states.length} states.`,
+      'success'
+    );
+  } else {
+    // Restore the original DFA view
+    resetSimulator();
+    renderDFA(currentDFA);
+    buildDFATable(currentDFA);
+
+    isShowingMinimized = false;
+  }
+
+  _updateMinimizeButton();
+}
+
+/**
+ * Keep the Minimize button label + disabled state in sync
+ * with the current DFA panel mode.
+ */
+function _updateMinimizeButton() {
+  if (!UI.btnMinimize) return;
+  UI.btnMinimize.disabled = !currentDFA;
+  UI.btnMinimize.textContent = isShowingMinimized ? 'Show Original' : 'Minimize';
+}
+
+/**
+ * Append a section to the step log describing the Moore
+ * minimization run. Skips silently if the log is empty.
+ */
+function appendMinimizeStepsToLog(steps) {
+  if (!steps || steps.length === 0) return;
+
+  // Remove any previous minimize block so toggling doesn't stack it
+  UI.stepsList.querySelectorAll('.min-step').forEach(el => el.remove());
+  const oldHeader = UI.stepsList.querySelector('.min-header');
+  if (oldHeader) oldHeader.remove();
+
+  const header = document.createElement('li');
+  header.className = 'min-header';
+  header.innerHTML = '<span class="step-phase min-phase">MOORE</span> minimization';
+  UI.stepsList.appendChild(header);
+
+  steps.forEach(step => {
+    const li = document.createElement('li');
+    li.className = 'step-item min-step';
+    li.innerHTML =
+      `<span class="step-phase min-phase">${String(step.phase || '').toUpperCase()}</span> ` +
+      (step.description || '');
+    UI.stepsList.appendChild(li);
+  });
 }
 
 
@@ -947,9 +1041,12 @@ function clearAll() {
   resetSimulator();
 
   // State
-  currentNFA    = null;
-  currentDFA    = null;
-  currentMinDFA = null;
+  currentNFA       = null;
+  currentDFA       = null;
+  currentMinDFA    = null;
+  currentMinSteps  = null;
+  isShowingMinimized = false;
+  _updateMinimizeButton();
 
   if (nfaSimulation) { nfaSimulation.stop(); nfaSimulation = null; }
   if (dfaSimulation) { dfaSimulation.stop(); dfaSimulation = null; }
@@ -1064,6 +1161,8 @@ function _nfaStateType(nfa, state) {
     .start-phase  { background: rgba(245,200,66,0.15);  color: #f5c842; border: 1px solid rgba(245,200,66,0.3);  }
     .trans-phase  { background: rgba(123,104,238,0.15); color: #7b68ee; border: 1px solid rgba(123,104,238,0.3); }
     .accept-phase { background: rgba(62,207,170,0.15);  color: #3ecfaa; border: 1px solid rgba(62,207,170,0.3);  }
+    .min-phase    { background: rgba(240,85,104,0.15);  color: #f05568; border: 1px solid rgba(240,85,104,0.3);  }
+    .min-header   { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border2, rgba(255,255,255,0.18)); font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text2, #9aa3b8); list-style: none; }
     .dead-node    { opacity: 0.45; }
     .node-circle.sim-active {
       stroke-width: 3;
@@ -1083,6 +1182,7 @@ document.addEventListener('DOMContentLoaded', () => {
   UI.btnConvert.addEventListener('click', handleConvert);
   UI.btnBuildTable.addEventListener('click', buildTransitionTable);
   UI.btnClear.addEventListener('click', clearAll);
+  if (UI.btnMinimize) UI.btnMinimize.addEventListener('click', handleMinimize);
 
   // Simulator
   UI.btnSimulate.addEventListener('click', handleSimulate);
