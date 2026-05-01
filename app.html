@@ -6,7 +6,7 @@
   <title>NFA → DFA Converter</title>
   <link rel="stylesheet" href="style.css" />
 
-  <!-- gate: bounce back to landing if the user didn't sign in -->
+  <!-- bounce back to the landing page if they didn't sign in -->
   <script>
     if (!sessionStorage.getItem('asuUser')) {
       window.location.replace('index.html');
@@ -15,7 +15,7 @@
 </head>
 <body>
 
-<!-- Header  -->
+<!-- header -->
   <header class="site-header">
     <div class="header-left">
       <span class="logo">NFA<span class="logo-arrow">→</span>DFA</span>
@@ -23,13 +23,13 @@
     </div>
     <nav class="header-right">
 
-      <!-- Preset button + floating dropdown anchored to header -->
+      <!-- preset button + floating dropdown -->
       <div class="preset-wrap">
         <button class="btn btn-ghost btn-sm" id="btn-load-preset">⬡ Load Preset</button>
         <div class="preset-dropdown" id="preset-dropdown" hidden>
           <p class="preset-label">Select an example NFA</p>
           <ul class="preset-list" id="preset-list">
-            <!-- populated by JS -->
+            <!-- filled in by JS -->
           </ul>
         </div>
       </div>
@@ -40,10 +40,10 @@
     </nav>
   </header>
 
-  <!-- Main Layout  -->
+  <!-- main layout -->
   <main class="app-layout">
 
-    <!-- LEFT SIDEBAR: NFA Input --> 
+    <!-- left sidebar: NFA input -->
     <aside class="sidebar">
 
       <section class="panel" id="panel-definition">
@@ -80,7 +80,7 @@
         </div>
       </section>
 
-      <!-- Transition Table -->
+      <!-- transition table -->
       <section class="panel" id="panel-transitions">
         <div class="panel-header">
           <span class="panel-dot nfa"></span>
@@ -95,7 +95,7 @@
         </div>
       </section>
 
-      <!-- String Simulator -->
+      <!-- string simulator -->
       <section class="panel" id="panel-simulate">
         <div class="panel-header">
           <span class="panel-dot accent2"></span>
@@ -118,18 +118,18 @@
           </div>
 
           <div class="sim-result" id="sim-result" hidden>
-            <!-- accept / reject banner injected by JS -->
+            <!-- accept/reject banner — JS fills this in -->
           </div>
 
           <div class="sim-tape" id="sim-tape" hidden>
-            <!-- tape cells injected by JS -->
+            <!-- tape cells — JS fills these in -->
           </div>
         </div>
       </section>
 
     </aside>
 
-    <!-- CENTER: Graph Canvases-->
+    <!-- center: graph canvases -->
     <section class="canvas-area">
 
       <div class="graph-panel" id="graph-nfa">
@@ -146,7 +146,7 @@
             <div class="empty-icon">◎</div>
             <p>Build your NFA to see it here</p>
           </div>
-          <!-- D3 SVG injected here -->
+          <!-- D3 drops the SVG in here -->
         </div>
       </div>
 
@@ -164,13 +164,13 @@
             <div class="empty-icon">⬡</div>
             <p>Run conversion to see the DFA</p>
           </div>
-          <!-- D3 SVG injected here -->
+          <!-- D3 drops the SVG in here -->
         </div>
       </div>
 
     </section>
 
-    <!-- RIGHT: Steps Log -->
+    <!-- right: step log -->
     <aside class="steps-panel">
 
       <div class="panel" id="panel-steps">
@@ -186,17 +186,17 @@
 
         <div class="steps-body" id="steps-body">
 
-          <!-- Step Log Tab -->
+          <!-- step log tab -->
           <div class="steps-tab-content active" id="tab-log">
             <div class="steps-empty" id="steps-empty">
               <p>Steps will appear here after conversion.</p>
             </div>
             <ol class="steps-list" id="steps-list" hidden>
-              <!-- step items injected by JS -->
+              <!-- step items — JS fills these in -->
             </ol>
           </div>
 
-          <!-- DFA Table Tab -->
+          <!-- DFA table tab -->
           <div class="steps-tab-content" id="tab-table">
             <div class="table-wrap" id="dfa-table-wrap">
               <p class="empty-hint">Run conversion to see the transition table.</p>
@@ -206,7 +206,7 @@
         </div>
       </div>
 
-      <!-- Info card -->
+      <!-- info card -->
       <div class="info-card" id="info-card">
         <h3 class="info-title">How it works</h3>
         <p>The <strong>subset construction</strong> algorithm converts any NFA into an equivalent DFA by treating each set of NFA states as a single DFA state.</p>
@@ -222,12 +222,12 @@
 
   </main>
 
-  <!-- TOAST NOTIFS-->
+  <!-- toast notifications -->
   <div class="toast" id="toast" hidden>
     <span id="toast-msg"></span>
   </div>
 
-  <!-- SCRIPTS -->
+  <!-- scripts -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
   <script src="examples/presets.js"></script>
   <script src="automata/nfa.js"></script>

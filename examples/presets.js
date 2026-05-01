@@ -1,7 +1,5 @@
-// 
-//  presets.js — Example NFA definitions
-//  Each preset has a name, desc, and full NFA definition.
-// 
+// presets.js — example NFAs the user can load from the dropdown
+// each one has a name, short description, and full NFA definition
 
 const PRESETS = [
 

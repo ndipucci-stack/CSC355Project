@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;700&display=swap" rel="stylesheet" />
 
   <style>
-    /* design tokens */
+    /* color/spacing tokens — kept here so they're easy to tweak */
     :root {
       --bg:       #0f1623;
       --surface:  #161f30;
@@ -45,7 +45,7 @@
       overflow: hidden;
     }
 
-    /* dot grid background */
+    /* faint dot-grid background */
     body::before {
       content: '';
       position: fixed;
@@ -55,7 +55,7 @@
       pointer-events: none;
     }
 
-    /* centered layout */
+    /* center the card */
     main {
       flex: 1;
       display: flex;
@@ -75,7 +75,7 @@
       gap: 18px;
     }
 
-    /* logo tile */
+    /* gradient logo tile */
     .logo-tile {
       width: 84px;
       height: 84px;
@@ -112,7 +112,7 @@
       margin-top: -6px;
     }
 
-    /* form */
+    /* email input */
     .field label {
       display: block;
       font-weight: 600;
@@ -147,7 +147,7 @@
       box-shadow: 0 0 0 3px rgba(240,85,104,0.2);
     }
 
-    /* primary button */
+    /* "Let's Learn" button */
     .btn-primary {
       width: 100%;
       padding: 13px 16px;
@@ -167,7 +167,7 @@
     .btn-primary:active { transform: translateY(1px); }
     .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
-    /* inline form message */
+    /* helper / error message under the input */
     .form-msg {
       min-height: 18px;
       font-size: 12px;
@@ -179,7 +179,7 @@
 
     .form-msg.info { color: var(--text3); }
 
-    /* short-viewport fallback */
+    /* let the page scroll on tiny windows */
     @media (max-height: 600px) {
       body { overflow: auto; }
     }
@@ -227,12 +227,12 @@
 
       const DEFAULT_MSG = 'Use your ASU email (@asu.edu) to continue.';
 
-      // Apps Script Web App — appends a row to the linked Google Sheet
+      // Apps Script web app — appends a row to my linked Google Sheet
       const LOG_URL = 'https://script.google.com/macros/s/AKfycbyorOq1rRQFQ3kZMDEwy0m3t5Ogx2pf691voZI5bAtKC4c5WdPW9foHH_B4ywi7IVLT/exec';
 
-      // Fire-and-forget logging. text/plain + no-cors avoids the
-      // CORS preflight Apps Script doesn't support; trade-off is
-      // we can't read the response (which is fine for logging).
+      // fire-and-forget log. text/plain + no-cors dodges the CORS
+      // preflight that Apps Script can't handle; downside is we can't
+      // read the response, which is fine since this is just logging.
       function logEmail(email) {
         try {
           fetch(LOG_URL, {
@@ -244,7 +244,7 @@
         } catch (_) {}
       }
 
-      // accepts only well-formed addresses ending in @asu.edu
+      // only allow well-formed addresses ending in @asu.edu
       function isAsuEmail(raw) {
         const val = (raw || '').trim().toLowerCase();
         const emailShape = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -265,7 +265,7 @@
         input.classList.remove('invalid');
       }
 
-      // reset error state as the user types
+      // clear the error styling once they start typing again
       input.addEventListener('input', clearError);
 
       form.addEventListener('submit', function (e) {
@@ -283,10 +283,10 @@
           return;
         }
 
-        // remember the session so app.html can gate access
+        // stash the email so app.html can gate access on it
         try { sessionStorage.setItem('asuUser', result.email); } catch (_) {}
 
-        // log the sign-in to the Google Sheet (non-blocking)
+        // log the sign-in to my Google Sheet (don't wait on it)
         logEmail(result.email);
 
         submit.disabled = true;

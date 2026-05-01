@@ -1,25 +1,11 @@
-// 
-//  dfa.js — DFA data model
-//
-//  Responsibilities:
-//    1. Wrap the raw DFA descriptor produced by nfa.js toDFA()
-//    2. Detect dead / trap states
-//    3. String simulation — step-by-step for the visualizer
-// 
+// dfa.js — DFA data model
+// wraps the descriptor object spit out by NFA.toDFA(),
+// figures out which states are dead, and runs string sims
 
 class DFA {
 
-  /**
-   * @param {Object} descriptor  — the plain object returned by NFA.toDFA()
-   *   {
-   *     states:       string[]
-   *     alphabet:     string[]
-   *     transitions:  { [state]: { [symbol]: state } }
-   *     startState:   string
-   *     acceptStates: string[]
-   *     subsetMap:    { [dfaState]: string[] }   < NFA subsets, for tooltips
-   *   }
-   */
+  // descriptor shape:
+  //   states, alphabet, transitions, startState, acceptStates, subsetMap
   constructor(descriptor) {
     this.states       = descriptor.states;
     this.alphabet     = descriptor.alphabet;
@@ -28,39 +14,21 @@ class DFA {
     this.acceptStates = new Set(descriptor.acceptStates);
     this.subsetMap    = descriptor.subsetMap ?? {};
 
-    // Derived sets — computed once on construction
+    // figure out dead states up front so we don't redo it later
     this.deadStates   = this._computeDeadStates();
   }
 
-  // 
-  //  INTERNAL HELPER — single transition lookup
-  //  Returns the target state or null if undefined
-  // 
+  // single-step lookup — returns the next state or null
   _step(state, symbol) {
     return this.transitions[state]?.[symbol] ?? null;
   }
 
-  // 
-  //  DEAD STATE DETECTION
-  //
-  //  A dead (trap) state is one from which NO accept state
-  //  is reachable, no matter what symbols are read.
-  //
-  //  Algorithm: reverse reachability from accept states.
-  //    1. Build a reverse transition graph
-  //    2. BFS/DFS backwards from every accept state
-  //    3. Any state NOT reached is a dead state
-  //
-  //  This is O(|states| × |alphabet|) — linear in the
-  //  size of the transition table.
-  //
-  //  @return {Set<string>}
-  // 
+  // dead state = can't reach an accept state no matter what
+  // trick: build the reverse graph, BFS backwards from accept states,
+  // anything we don't visit is dead
   _computeDeadStates() {
 
-    // 1. Build reverse graph 
-    // reverseGraph.get(state) = Set of states that have a
-    // transition INTO state on any symbol
+    // reverseGraph.get(s) = states that point INTO s
     const reverseGraph = new Map();
     for (const s of this.states) reverseGraph.set(s, new Set());
 
@@ -73,7 +41,7 @@ class DFA {
       }
     }
 
-    //  2. BFS backwards from all accept states 
+    // BFS backwards starting from every accept state
     const canReachAccept = new Set(this.acceptStates);
     const queue = [...this.acceptStates];
 
@@ -87,7 +55,7 @@ class DFA {
       }
     }
 
-    // Dead = everything NOT in canReachAccept 
+    // anything we didn't reach = dead
     const dead = new Set();
     for (const s of this.states) {
       if (!canReachAccept.has(s)) dead.add(s);
@@ -96,18 +64,12 @@ class DFA {
     return dead;
   }
 
-  // 
-  //  STATE TYPE HELPERS
-  // 
-
+  // tiny state-type helpers used by the renderer
   isAccept(state) { return this.acceptStates.has(state); }
   isDead(state)   { return this.deadStates.has(state); }
   isStart(state)  { return state === this.startState; }
 
-  /**
-   * Returns 'start-accept' | 'start' | 'accept' | 'dead' | 'normal'
-   * Used by the renderer to pick node styling.
-   */
+  // returns the type the renderer needs to pick a color
   stateType(state) {
     const start  = this.isStart(state);
     const accept = this.isAccept(state);
@@ -119,43 +81,17 @@ class DFA {
     return 'normal';
   }
 
-  // 
-  //  STRING SIMULATION
-  //
-  //  Runs the DFA on an input string and returns a trace —
-  //  one record per symbol consumed — so the visualizer can
-  //  animate the active state step by step.
-  //
-  //  Each record in the trace:
-  //  {
-  //    stepIndex:    number      — 0-based position in string
-  //    symbol:       string      — symbol just consumed
-  //    fromState:    string      — state before consuming
-  //    toState:      string|null — state after (null = no transition)
-  //    isStuck:      boolean     — true if no transition existed
-  //  }
-  //
-  //  Final result record (after all symbols consumed):
-  //  {
-  //    stepIndex:  inputLength
-  //    symbol:     null
-  //    fromState:  final state
-  //    toState:    null
-  //    accepted:   boolean
-  //    isStuck:    boolean
-  //  }
-  //
-  //  @param  {string}   inputString
-  //  @return {{ accepted: boolean, trace: Object[] }}
-  // 
+  // run the DFA on an input string
+  // returns { accepted, trace } where trace is one record per step
+  // so the simulator UI can step through symbol by symbol
   simulate(inputString) {
-    const symbols = [...inputString];   // split handles multi-char symbols
+    const symbols = [...inputString];   // spread handles weird unicode/multi-char
     const trace   = [];
 
     let current = this.startState;
     let stuck   = false;
 
-    // ── Initial record: before any symbol is read 
+    // initial record — before reading anything
     trace.push({
       stepIndex:  -1,
       symbol:     null,
@@ -166,13 +102,13 @@ class DFA {
       isInitial:  true
     });
 
-    // ── Process each symbol 
+    // chew through each symbol
     for (let i = 0; i < symbols.length; i++) {
       const sym  = symbols[i];
       const next = this._step(current, sym);
 
       if (next === null) {
-        // No transition — machine is stuck (implicit reject)
+        // no transition defined — dead end, reject
         trace.push({
           stepIndex: i,
           symbol:    sym,
@@ -197,7 +133,7 @@ class DFA {
       current = next;
     }
 
-    //  Final record 
+    // final record — accept iff we landed on an accept state
     const accepted = !stuck && this.isAccept(current);
 
     trace.push({
@@ -213,11 +149,7 @@ class DFA {
     return { accepted, trace };
   }
 
-  // 
-  //  EXPORT
-  //  Returns a plain serialisable object — useful for
-  //  saving state or passing to a renderer.
-  // 
+  // dump everything back to a plain object (useful for saving/passing around)
   toDescriptor() {
     return {
       states:       [...this.states],
@@ -230,9 +162,7 @@ class DFA {
     };
   }
 
-  // 
-  //  SUMMARY  — for the UI info panel
-  // 
+  // quick stats for an info panel
   summary() {
     return {
       totalStates:  this.states.length,

@@ -1,10 +1,10 @@
-// Guided walkthrough for the NFA→DFA visualizer.
-// Vanilla JS, no dependencies. Triggered by the header Tutorial button.
+// guided walkthrough — fires from the Tutorial button in the header.
+// no deps, just vanilla JS.
 
 (function () {
   'use strict';
 
-  // Each step selector must always be in the DOM (not hidden).
+  // each step's selector has to actually exist in the DOM (not hidden)
   const STEPS = [
     {
       selector: null,
@@ -118,8 +118,8 @@
   ];
 
   // engine state
-  let idx = 0;
-  let active = false;
+  let idx = 0;          // current step
+  let active = false;   // is the tour open?
   let backdropEl = null;
   let spotlightEl = null;
   let popoverEl = null;
@@ -197,7 +197,7 @@
     const target = step.selector ? document.querySelector(step.selector) : null;
 
     if (!target) {
-      // centered welcome — no target
+      // welcome step has no target — just center it
       spotlightEl.style.display = 'none';
       popoverEl.classList.add('is-centered');
       popoverEl.style.top = '';
@@ -211,7 +211,7 @@
 
     target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
 
-    // wait one frame for scroll to settle before measuring
+    // wait a frame for the scroll to finish before measuring
     requestAnimationFrame(() => {
       const rect = target.getBoundingClientRect();
       const pad = 8;
@@ -226,7 +226,7 @@
     });
   }
 
-  // pick the preferred side if it fits, else fall back to any side that does
+  // try the preferred side first; if it doesn't fit, fall back to any side that does
   function resolvePlacement(pref, rect) {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -283,7 +283,7 @@
         break;
     }
 
-    // clamp to viewport
+    // keep it on-screen
     top = Math.max(12, Math.min(top, vh - popH - 12));
     left = Math.max(12, Math.min(left, vw - popW - 12));
 

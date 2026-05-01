@@ -1,46 +1,23 @@
-// 
-//  minimizer.js — Moore's Algorithm (DFA Minimization)
+// minimizer.js — Moore's algorithm for DFA minimization
+// takes a DFA, returns a minimized one + a step log for the visualizer.
 //
-//  Takes a fully built DFA instance.
-//  Returns a minimized equivalent DFA + a step log for the
-//  visualizer showing how partitions were refined.
-//
-//  Algorithm overview
-//  Moore's algorithm works by partition refinement:
-//
-//  1. REMOVE unreachable states first (they can confuse
-//     the partition logic and bloat the result)
-//
-//  2. INITIAL PARTITION — two groups:
-//       P0 = accept states
-//       P1 = non-accept states
-//
-//  3. REFINEMENT LOOP — repeat until stable:
-//       For every group G in the current partition:
-//         For every symbol a in the alphabet:
-//           Check where each state in G goes on symbol a.
-//           If two states in G land in DIFFERENT groups,
-//           they are distinguishable → split G.
-//       Replace G with the resulting sub-groups.
-//
-//  4. BUILD minimized DFA:
-//       Each final group becomes one DFA state.
-//       Representative state = first member of the group.
-//       Transitions follow from any representative.
-//       Accept states = groups containing an original accept state.
+// the idea, in short:
+//   1. drop any unreachable states (they only confuse the partitions)
+//   2. start with two groups: accept states vs everything else
+//   3. keep splitting groups whenever two states in the same group
+//      go to different groups on the same symbol — that means they're
+//      distinguishable. stop when nothing splits anymore.
+//   4. each final group becomes one state in the minimized DFA.
 
 const Minimizer = (() => {
 
-  // 
-  //  PUBLIC ENTRY POINT
-  //
-  //  @param  {DFA}    dfa
-  //  @return {{ dfa: DFA, steps: Object[] }}
-  // 
+  // public entry point
+  // input:  a DFA instance
+  // output: { dfa: <minimized DFA>, steps: <step log array> }
   function minimize(dfa) {
     const steps = [];
 
-    //  STEP 1: remove unreachable states 
+    // step 1: kill unreachable states
     const reachable = _reachableStates(dfa);
 
     const removedCount = dfa.states.length - reachable.size;
@@ -54,17 +31,16 @@ const Minimizer = (() => {
         : 'All states are reachable — nothing removed.'
     });
 
-    // Work only with reachable states from here on
+    // from here on we only care about reachable states
     const states   = dfa.states.filter(s => reachable.has(s));
     const alphabet = dfa.alphabet;
 
-    // ── STEP 2: initial partition 
-    // Group 0 = accept states (that are reachable)
-    // Group 1 = non-accept states (that are reachable)
+    // step 2: starting partition
+    //   group 0 = accept states (that are reachable)
+    //   group 1 = non-accept states (that are reachable)
     const acceptGroup    = states.filter(s => dfa.isAccept(s));
     const nonAcceptGroup = states.filter(s => !dfa.isAccept(s));
 
-    // partitions = array of groups, each group = array of state names
     let partitions = [];
     if (acceptGroup.length > 0)    partitions.push(acceptGroup);
     if (nonAcceptGroup.length > 0) partitions.push(nonAcceptGroup);
@@ -76,7 +52,7 @@ const Minimizer = (() => {
         partitions.map((g, i) => `P${i}={${g.join(',')}}`).join(' | ')
     });
 
-    //  STEP 3: refinement loop 
+    // step 3: keep splitting until nothing changes
     let iteration = 0;
 
     while (true) {
@@ -86,17 +62,15 @@ const Minimizer = (() => {
 
       for (const group of partitions) {
 
-        // A group with one state can never be split
+        // singletons can't split
         if (group.length === 1) {
           newPartitions.push(group);
           continue;
         }
 
-        // Try to split this group on every symbol
         const splits = _splitGroup(group, alphabet, partitions, dfa);
 
         if (splits.length > 1) {
-          // This group was split into 2+ sub-groups
           didSplit = true;
           newPartitions.push(...splits);
 
@@ -110,7 +84,6 @@ const Minimizer = (() => {
           });
 
         } else {
-          // No split — group stays intact
           newPartitions.push(group);
         }
       }
@@ -118,7 +91,7 @@ const Minimizer = (() => {
       partitions = newPartitions;
 
       if (!didSplit) {
-        // Partition is stable — algorithm terminates
+        // stable — we're done
         steps.push({
           phase:       'stable',
           iteration,
@@ -130,7 +103,7 @@ const Minimizer = (() => {
       }
     }
 
-    //  STEP 4: build minimized DFA 
+    // step 4: build the minimized DFA from the final partitions
     const minDescriptor = _buildMinDFA(partitions, dfa, steps);
     const minDFA        = new DFA(minDescriptor);
 
@@ -147,10 +120,7 @@ const Minimizer = (() => {
     return { dfa: minDFA, steps };
   }
 
-  // 
-  //  REACHABLE STATES
-  //  BFS from start state — anything not visited is unreachable.
-  // 
+  // BFS from the start state. anything we don't visit is unreachable.
   function _reachableStates(dfa) {
     const visited = new Set([dfa.startState]);
     const queue   = [dfa.startState];
@@ -169,21 +139,13 @@ const Minimizer = (() => {
     return visited;
   }
 
-  
-  //  SPLIT GROUP
-  //
-  //  Given a group of states, try to split it by checking
-  //  whether every state transitions to the SAME partition
-  //  group on every symbol.
-  //
-  //  Two states p, q are distinguishable in this round if
-  //  there exists a symbol a such that:
-  //    partitionOf(δ(p,a)) ≠ partitionOf(δ(q,a))
-  //
-  //  Returns an array of sub-groups (length 1 = no split).
+  // try to split a group based on where its members go on each symbol.
+  // two states are distinguishable in this round if they land in
+  // different partitions on at least one symbol.
+  // returns the new sub-groups (length 1 = no split happened).
   function _splitGroup(group, alphabet, partitions, dfa) {
 
-    // Build a lookup: state → partition index
+    // lookup: state → which partition it's in
     const partitionIndex = new Map();
     for (let i = 0; i < partitions.length; i++) {
       for (const s of partitions[i]) {
@@ -191,19 +153,17 @@ const Minimizer = (() => {
       }
     }
 
-    //  Compute a "signature" for each state 
-    // Signature = tuple of partition indices the state goes to
-    // on each symbol, in alphabet order.
-    // States with identical signatures stay in the same group.
+    // signature = list of partition indices the state goes to
+    // on each symbol. same signature → same group.
     const signatureOf = (state) =>
       alphabet.map(sym => {
         const target = dfa.transitions[state]?.[sym];
-        if (!target) return -1;                     // no transition → dead/-1
-        return partitionIndex.get(target) ?? -1;    // target not in partition → -1
+        if (!target) return -1;                     // no transition (dead end)
+        return partitionIndex.get(target) ?? -1;
       }).join('|');
 
-    //  Group states by signature 
-    const buckets = new Map();  // signature → [states]
+    // bucket by signature
+    const buckets = new Map();
 
     for (const state of group) {
       const sig = signatureOf(state);
@@ -211,19 +171,14 @@ const Minimizer = (() => {
       buckets.get(sig).push(state);
     }
 
-    // Return the sub-groups (order preserved as insertion order)
     return [...buckets.values()];
   }
 
-  //  BUILD MINIMIZED DFA
-  //
-  //  Each partition group → one DFA state.
-  //  Name = sorted, joined member names wrapped in braces,
-  //  unless the group has one member (keep original name).
-  //  Representative = first member of each group.
+  // turn the final partitions into a real DFA descriptor.
+  // each group becomes one state. name is "{a,b}" if multiple, else just the name.
+  // representative state for transitions = the first member.
   function _buildMinDFA(partitions, dfa, steps) {
 
-    //  Name each partition group 
     const groupName = (group) =>
       group.length === 1
         ? group[0]
@@ -231,7 +186,7 @@ const Minimizer = (() => {
 
     const names = partitions.map(groupName);
 
-    //  Map every original state to tis group name 
+    // every original state → its group's name
     const stateToGroup = new Map();
     for (let i = 0; i < partitions.length; i++) {
       for (const s of partitions[i]) {
@@ -239,11 +194,10 @@ const Minimizer = (() => {
       }
     }
 
-    //  Transitions 
-    // Follow representative (first member) of each group
+    // transitions — follow the rep of each group
     const transitions = {};
     for (let i = 0; i < partitions.length; i++) {
-      const rep  = partitions[i][0];   // representative
+      const rep  = partitions[i][0];
       const name = names[i];
       transitions[name] = {};
 
@@ -255,21 +209,19 @@ const Minimizer = (() => {
       }
     }
 
-    //  Start state 
+    // start state = whatever group the original start belongs to
     const startName = stateToGroup.get(dfa.startState);
 
-    //  Accept states 
+    // accept = any group that contains an original accept state
     const acceptNames = [];
     for (let i = 0; i < partitions.length; i++) {
-      // Group is accepting if ANY member is an original accept state
       if (partitions[i].some(s => dfa.isAccept(s))) {
         acceptNames.push(names[i]);
       }
     }
 
-    //  Rebuild subsetMap for tooltips 
-    // Each minimized state maps to the union of NFA subsets
-    // of all the DFA states it absorbed
+    // rebuild the NFA-subset map for tooltips
+    // each merged state = union of NFA subsets it absorbed
     const subsetMap = {};
     for (let i = 0; i < partitions.length; i++) {
       const name    = names[i];
@@ -281,7 +233,7 @@ const Minimizer = (() => {
       subsetMap[name] = [...nfaUnion];
     }
 
-    //  Log merged groups 
+    // log every group we actually merged
     for (let i = 0; i < partitions.length; i++) {
       if (partitions[i].length > 1) {
         steps.push({
@@ -303,7 +255,7 @@ const Minimizer = (() => {
     };
   }
 
-  // Public API
+  // public API
   return { minimize };
 
 })();
