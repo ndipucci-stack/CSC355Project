@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title data-i18n="pageTitle">NFA → DFA Visualizer · Sign in</title>
+  <title>NFA → DFA Visualizer · Sign in</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -112,47 +112,6 @@
       margin-top: -6px;
     }
 
-    /* language dropdown */
-    .lang-wrap {
-      align-self: center;
-      position: relative;
-    }
-
-    .lang-wrap::after {
-      content: '▾';
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 10px;
-      color: var(--text3);
-      pointer-events: none;
-    }
-
-    .lang-select {
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      padding: 6px 28px 6px 12px;
-      border: 1px solid var(--border2);
-      border-radius: 6px;
-      background: var(--surface);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--text2);
-      cursor: pointer;
-      outline: none;
-      transition: border-color 0.15s, color 0.15s;
-    }
-
-    .lang-select:hover,
-    .lang-select:focus { color: var(--text); border-color: var(--accent); }
-
-    .lang-select option {
-      background: var(--surface);
-      color: var(--text);
-    }
-
     /* form */
     .field label {
       display: block;
@@ -220,31 +179,6 @@
 
     .form-msg.info { color: var(--text3); }
 
-    /* footer */
-    footer {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      gap: 14px;
-      padding: 18px 28px;
-      font-size: 12px;
-      color: var(--text3);
-    }
-
-    footer a {
-      color: inherit;
-      text-decoration: none;
-    }
-    footer a:hover { color: var(--text); }
-
-    footer .sep {
-      width: 1px;
-      height: 12px;
-      background: var(--border2);
-    }
-
     /* short-viewport fallback */
     @media (max-height: 600px) {
       body { overflow: auto; }
@@ -260,112 +194,29 @@
         N<span class="arrow">→</span>D
       </div>
 
-      <p class="subtitle" data-i18n="subtitle">CSC 355 · Automata Visualizer</p>
-
-      <div class="lang-wrap">
-        <select class="lang-select" id="lang-select" aria-label="Page language" data-i18n-aria="langAria">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-        </select>
-      </div>
+      <p class="subtitle">CSC 355 · Automata Visualizer</p>
 
       <div class="field">
-        <label for="email" data-i18n="emailLabel">Email</label>
+        <label for="email">Email</label>
         <input
           type="email"
           id="email"
           name="email"
           autocomplete="username"
           placeholder="yourname@asu.edu"
-          data-i18n-placeholder="emailPlaceholder"
           spellcheck="false"
           autofocus
           required
         />
       </div>
 
-      <p class="form-msg info" id="form-msg" data-i18n="defaultMsg">Use your ASU email (@asu.edu) to continue.</p>
+      <p class="form-msg info" id="form-msg">Use your ASU email (@asu.edu) to continue.</p>
 
-      <button type="submit" class="btn-primary" id="btn-submit" data-i18n="submitBtn">Let's Learn</button>
+      <button type="submit" class="btn-primary" id="btn-submit">Let's Learn</button>
     </form>
   </main>
 
-
   <script>
-    // hardcoded EN/ES strings for the landing page
-    const I18N = {
-      en: {
-        pageTitle:        'NFA → DFA Visualizer · Sign in',
-        subtitle:         'CSC 355 · Automata Visualizer',
-        langAria:         'Page language',
-        emailLabel:       'Email',
-        emailPlaceholder: 'yourname@asu.edu',
-        defaultMsg:       'Use your ASU email (@asu.edu) to continue.',
-        submitBtn:        "Let's Learn",
-        loadingBtn:       'Loading\u2026',
-        errShape:         'That doesn\u2019t look like a valid email address.',
-        errDomain:        'Please sign in with your ASU email (must end in @asu.edu).',
-        privacy:          'Privacy',
-        terms:            'Terms',
-        htmlLang:         'en',
-      },
-      es: {
-        pageTitle:        'Visualizador NFA → DFA · Iniciar sesión',
-        subtitle:         'CSC 355 · Visualizador de Autómatas',
-        langAria:         'Idioma de la página',
-        emailLabel:       'Correo electrónico',
-        emailPlaceholder: 'tunombre@asu.edu',
-        defaultMsg:       'Usa tu correo de ASU (@asu.edu) para continuar.',
-        submitBtn:        'Vamos a aprender',
-        loadingBtn:       'Cargando\u2026',
-        errShape:         'Eso no parece una dirección de correo válida.',
-        errDomain:        'Inicia sesión con tu correo de ASU (debe terminar en @asu.edu).',
-        privacy:          'Privacidad',
-        terms:            'Términos',
-        htmlLang:         'es',
-      },
-    };
-
-    const STORAGE_KEY = 'landingLang';
-
-    // current dictionary — exposed so the auth script can read error strings
-    let dict = I18N.en;
-
-    function applyLanguage(code) {
-      const lang = I18N[code] ? code : 'en';
-      dict = I18N[lang];
-
-      document.documentElement.lang = dict.htmlLang;
-
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (dict[key] != null) el.textContent = dict[key];
-      });
-      document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-        const key = el.getAttribute('data-i18n-placeholder');
-        if (dict[key] != null) el.setAttribute('placeholder', dict[key]);
-      });
-      document.querySelectorAll('[data-i18n-aria]').forEach(el => {
-        const key = el.getAttribute('data-i18n-aria');
-        if (dict[key] != null) el.setAttribute('aria-label', dict[key]);
-      });
-
-      try { localStorage.setItem(STORAGE_KEY, lang); } catch (_) {}
-    }
-
-    // wire the dropdown and restore any saved choice
-    (function () {
-      'use strict';
-      const langSelect = document.getElementById('lang-select');
-      let saved = 'en';
-      try { saved = localStorage.getItem(STORAGE_KEY) || 'en'; } catch (_) {}
-      langSelect.value = I18N[saved] ? saved : 'en';
-      applyLanguage(langSelect.value);
-
-      langSelect.addEventListener('change', e => applyLanguage(e.target.value));
-    })();
-
-    // email gate
     (function () {
       'use strict';
 
@@ -373,6 +224,25 @@
       const input   = document.getElementById('email');
       const msg     = document.getElementById('form-msg');
       const submit  = document.getElementById('btn-submit');
+
+      const DEFAULT_MSG = 'Use your ASU email (@asu.edu) to continue.';
+
+      // Apps Script Web App — appends a row to the linked Google Sheet
+      const LOG_URL = 'https://script.google.com/macros/s/AKfycbyorOq1rRQFQ3kZMDEwy0m3t5Ogx2pf691voZI5bAtKC4c5WdPW9foHH_B4ywi7IVLT/exec';
+
+      // Fire-and-forget logging. text/plain + no-cors avoids the
+      // CORS preflight Apps Script doesn't support; trade-off is
+      // we can't read the response (which is fine for logging).
+      function logEmail(email) {
+        try {
+          fetch(LOG_URL, {
+            method:  'POST',
+            mode:    'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body:    JSON.stringify({ email: email, ua: navigator.userAgent }),
+          }).catch(() => {});
+        } catch (_) {}
+      }
 
       // accepts only well-formed addresses ending in @asu.edu
       function isAsuEmail(raw) {
@@ -390,7 +260,7 @@
       }
 
       function clearError() {
-        msg.textContent = dict.defaultMsg;
+        msg.textContent = DEFAULT_MSG;
         msg.classList.add('info');
         input.classList.remove('invalid');
       }
@@ -404,7 +274,11 @@
         const result = isAsuEmail(input.value);
 
         if (!result.ok) {
-          setError(result.reason === 'shape' ? dict.errShape : dict.errDomain);
+          if (result.reason === 'shape') {
+            setError('That doesn’t look like a valid email address.');
+          } else {
+            setError('Please sign in with your ASU email (must end in @asu.edu).');
+          }
           input.focus();
           return;
         }
@@ -412,8 +286,11 @@
         // remember the session so app.html can gate access
         try { sessionStorage.setItem('asuUser', result.email); } catch (_) {}
 
+        // log the sign-in to the Google Sheet (non-blocking)
+        logEmail(result.email);
+
         submit.disabled = true;
-        submit.textContent = dict.loadingBtn;
+        submit.textContent = 'Loading…';
         window.location.href = 'app.html';
       });
     })();

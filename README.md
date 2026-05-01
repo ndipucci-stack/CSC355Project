@@ -25,16 +25,16 @@ State University's CSC 355 (Theoretical Computer Science).
 - **Guided tutorial** — a built-in walkthrough that spotlights each
   panel and pairs a short UI orientation with a plain-English theory
   refresher on NFAs, DFAs, ε-closure, and subset construction.
+- **DFA minimization** — one-click Moore's algorithm to collapse the
+  DFA into its minimal equivalent, with merge steps appended to the
+  step log.
 - **ASU email gate** — a landing page that accepts `@asu.edu` addresses
   before entering the app.
-- **Bilingual UI** — landing page supports English and Spanish via a
-  language dropdown powered by Google Translate.
 
 ## Running locally
 
 The app is pure HTML, CSS, and vanilla JavaScript — no build step,
-no package manager. Clone the repo and serve it over HTTP (Google
-Translate doesn't work from `file://` URLs).
+no package manager. Clone the repo and serve it over HTTP.
 
 ```
 git clone https://github.com/ndipucci-stack/CSC355Project.git
@@ -50,7 +50,6 @@ VS Code and launch it with the Live Server extension.
 - Vanilla JavaScript (no framework)
 - D3.js v7 for graph rendering
 - Google Fonts (Syne, IBM Plex Mono)
-- Google Translate Element for the Spanish option
 - Hosted on GitHub Pages
 
 ## Project layout
